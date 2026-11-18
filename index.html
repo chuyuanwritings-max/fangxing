@@ -2533,12 +2533,16 @@ function drawWork() {
 function drawTitle() {
   const b = LY.booth;
   A.booth(ctx, b.x, b.y + 40, b.w, b.h + 40, G.t, (Math.sin(G.t * 0.8) + 1) / 2 > 0.9 ? 1 : 0);
-  A.bigText(ctx, '放 行', L.W / 2, b.y + b.h + 140, 64, C.yellow);
-  A.text(ctx, data.world.place, L.W / 2, b.y + b.h + 190, 14, C.teal, 'center', '900');
-  data.world.intro.forEach((l, i) => A.text(ctx, l, L.W / 2, b.y + b.h + 224 + i * 22, 13, C.white, 'center', '700'));
+  // 矮屏（手机浏览器去掉地址栏后）整块往上挪，免得介绍字被「上岗」按钮压住
+  const introN = data.world.intro.length;
+  const lift = Math.max(0, (b.y + b.h + 224 + (introN - 1) * 22 + 10) - (L.H - 120 - 8));
+  const y0 = b.y + b.h - lift;
+  A.bigText(ctx, '放 行', L.W / 2, y0 + 140, 64, C.yellow);
+  A.text(ctx, data.world.place, L.W / 2, y0 + 190, 14, C.teal, 'center', '900');
+  data.world.intro.forEach((l, i) => A.text(ctx, l, L.W / 2, y0 + 224 + i * 22, 13, C.white, 'center', '700'));
   // 章一直在盖
   const k = (G.t % 2.2) / 2.2;
-  A.bigStamp(ctx, L.W / 2 + 96, b.y + b.h + 120, 80, 34, true, k < 0.1 ? k * 10 : 1 - (k - 0.1) * 0.6, -0.2);
+  A.bigStamp(ctx, L.W / 2 + 96, y0 + 120, 80, 34, true, k < 0.1 ? k * 10 : 1 - (k - 0.1) * 0.6, -0.2);
   button('start', L.W / 2 - 90, L.H - 120, 180, 60, '上 岗', C.green, C.greenS, startRun, { color: C.white, size: 22 });
   const best = G.save.best;
   if (best) A.text(ctx, '上次最好：存款 ¥' + best.money + ' · 判对 ' + best.acc + '%', L.W / 2, L.H - 40, 11, C.grey, 'center', '700');
