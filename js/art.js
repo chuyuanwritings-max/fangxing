@@ -71,14 +71,37 @@ function block(ctx, x, y, w, h, fill, shade, opt) {
 }
 
 // —— 像素格 ——
-function drawCells(ctx, cells, gw, gh, x, y, cell, headDy, headRows, tint) {
+// tone：'grey' 报纸灰 / 'pale' 褪色（重病）/ 空 = 原色
+const toneCache = {};
+function toneColor(c, tone) {
+  const k = tone + c;
+  if (toneCache[k]) return toneCache[k];
+  const n = parseInt(c.slice(1), 16);
+  const r = (n >> 16) & 255;
+  const g = (n >> 8) & 255;
+  const b = n & 255;
+  const l = 0.3 * r + 0.59 * g + 0.11 * b;
+  let out;
+  if (tone === 'grey') {
+    // 报纸只有四种灰
+    const lv = l < 60 ? '#2b2620' : l < 120 ? '#5a534a' : l < 185 ? '#8f877b' : '#d6cdbb';
+    out = lv;
+  } else {
+    const m = (v) => Math.round(v * 0.35 + l * 0.45 + 30);
+    out = 'rgb(' + m(r) + ',' + m(g) + ',' + m(b) + ')';
+  }
+  toneCache[k] = out;
+  return out;
+}
+
+function drawCells(ctx, cells, gw, gh, x, y, cell, headDy, headRows, tint, tone) {
   const ov = 0.35; // 盖一点缝，免得放大后格子之间露线
   for (let j = 0; j < gh; j++) {
     const dy = j < headRows ? headDy : 0;
     for (let i = 0; i < gw; i++) {
       const c = cells[j * gw + i];
       if (!c) continue;
-      ctx.fillStyle = c;
+      ctx.fillStyle = tone ? toneColor(c, tone) : c;
       ctx.fillRect(x + i * cell, y + j * cell + dy, cell + ov, cell + ov);
     }
   }
@@ -95,7 +118,7 @@ function drawCells(ctx, cells, gw, gh, x, y, cell, headDy, headRows, tint) {
 function portrait(ctx, f, x, y, cell, o) {
   o = o || {};
   const g = face.grid(f, o);
-  drawCells(ctx, g, face.W, face.H, x, y, cell, o.headDy || 0, face.HEAD_ROWS, o.tint);
+  drawCells(ctx, g, face.W, face.H, x, y, cell, o.headDy || 0, face.HEAD_ROWS, o.tint, o.tone);
 }
 
 // —— 图标：字母画（. 是空），自动描边 ——
@@ -142,6 +165,43 @@ const ICONS = {
   watch: { p: { a: '#ffd23f', b: '#c99a1e', c: '#f4f0e8', d: '#120c18', e: '#6a4228' }, m: [
     '....eeee....', '....eeee....', '...aaaaaa...', '..accccccb..', '..accdcccb..', '..accddccb..',
     '..accccccb..', '...bbbbbb...', '....eeee....', '....eeee....'] },
+  crate: { p: { a: '#8a5a2a', b: '#5e3c1a', c: '#c9a46a' }, m: [
+    'cccccccccccc', 'caaaaaaaaaab', 'cabbbbbbbbab', 'caaaaaaaaaab', 'cabbbbbbbbab', 'caaaaaaaaaab',
+    'cabbbbbbbbab', 'caaaaaaaaaab', 'bbbbbbbbbbbb'] },
+  herbs: { p: { a: '#6aa84f', b: '#3f7a30', c: '#c9a46a', d: '#e0433a' }, m: [
+    '..a..a..a...', '.aaa.aa.aa..', '..aabaabaa..', '...abbaba...', '....dddd....', '....cccc....',
+    '....cccc....', '....cccc....', '.....cc.....'] },
+  coal: { p: { a: '#8a7a5a', b: '#5e523a', c: '#2a2a30', d: '#4a4a52' }, m: [
+    '....cdcd....', '...cdcdcd...', '..aaaaaaaa..', '.aaaaaaaaab.', '.aaaaaaaaab.', '.aaaaaaaaab.',
+    '.aaaaaaaaab.', '..bbbbbbbb..'] },
+  doll: { p: { a: '#f2c9a0', b: '#d24b7c', c: '#2a2230', d: '#ff7aa8' }, m: [
+    '....cccc....', '...caaaac...', '...acaaca...', '...aaaaaa...', '....aaaa....', '...dddddd...',
+    '..ddbddbdd..', '...dddddd...', '...dd..dd...'] },
+  apron: { p: { a: '#f4f0e8', b: '#c8c2b8', c: '#3f7fd1' }, m: [
+    '...c....c...', '....c..c....', '...aaaaaa...', '..aaaaaaab..', '..aaccccab..', '..aaaaaaab..',
+    '..aaaaaaab..', '..bbbbbbbb..'] },
+  oldphoto: { p: { a: '#e8dcc0', b: '#b8a880', c: '#8a7a5a', d: '#3a3020' }, m: [
+    'aaaaaaaaaa', 'abbbbbbbba', 'abccddccba', 'abcddddcba', 'abccddccba', 'abcddddcba', 'abbbbbbbba', 'aaaaaaaaab'] },
+  brochure: { p: { a: '#f4f0e8', b: '#c8c2b8', c: '#3f7fd1', d: '#e0433a' }, m: [
+    'cccccccc', 'cacacaca', 'aaaaaaab', 'adddaaab', 'aaaaaaab', 'acccccab', 'aaaaaaab', 'bbbbbbbb'] },
+  oldpass: { p: { a: '#d8c8a8', b: '#a89878', c: '#8a3a2a', d: '#6a5a40' }, m: [
+    'cccccccccc', 'aaaaaaaaab', 'adddaaccab', 'aaaaacaacb', 'adddaaccab', 'aaaaaaaaab', 'bbbbbbbbbb'] },
+  shoes: { p: { a: '#f4f0e8', b: '#c8c2b8', c: '#e0433a', d: '#2a2230' }, m: [
+    '..cc....cc..', '.cccc..cccc.', '.ccccc.ccccc', 'aaaaaa.aaaaa', 'dddddd.ddddd'] },
+  fakepass: { p: { a: '#efe5cc', b: '#cfc09c', c: '#b0563a', d: '#7d43c9', e: '#120c18' }, m: [
+    'cccccccccc', 'aaaaaaaaab', 'aeeeaaddab', 'aaaaaddddb', 'aeeaaaddab', 'aaaaaaaaab', 'bbbbbbbbbb'] },
+  yuanpass: { p: { a: '#cfe3e6', b: '#a8c4c9', c: '#2f7a7a', d: '#e0433a', e: '#120c18' }, m: [
+    'cccccccccc', 'aaaaaaaaab', 'aeeeaaaaab', 'aaaaaaddab', 'aeeaaaddab', 'aaaaaaaaab', 'bbbbbbbbbb'] },
+  candle: { p: { a: '#f4f0e8', b: '#c8c2b8', c: '#ffd23f', d: '#ff8a3a' }, m: [
+    '..c..', '.cdc.', '..d..', '.aaa.', '.aab.', '.aab.', '.aab.', 'bbbbb'] },
+  medbottle: { p: { a: '#c9483a', b: '#8f2f26', c: '#f4f0e8', d: '#e8e0d0' }, m: [
+    '..cccc..', '..dddd..', '.aaaaaa.', '.acccca.', '.acaaca.', '.acccca.', '.aaaaab.', '..bbbb..'] },
+  jar: { p: { a: '#bfe3ea', b: '#8fb8c2', c: '#ffd23f', d: '#8a6a3a' }, m: [
+    '.dddddd.', 'aaaaaaaa', 'a.cc..ab', 'a.....ab', 'a.cc.cab', 'acccccab', 'bbbbbbbb'] },
+  print: { p: { a: '#f4f0e8', b: '#2a2030', c: '#c8c2b8' }, m: [
+    '..bbbb..', '.baaaab.', 'babbbbab', 'bab..bab', 'babbbbab', '.baaaab.', '..bbbb..'] },
+  lock: { p: { a: '#8b8496', b: '#615a6c', c: '#ffd23f' }, m: [
+    '..bbbb..', '.b....b.', '.b....b.', 'aaaaaaaa', 'aaacaaaa', 'aaacaaab', 'bbbbbbbb'] },
   // UI 小图标
   cal: { p: { a: '#f4f0e8', b: '#c8c2b8', c: '#e0433a', d: '#120c18' }, m: [
     '.c....c.', 'cccccccc', 'aaaaaaaa', 'adadadab', 'aaaaaaab', 'adadadab', 'bbbbbbbb'] },
@@ -243,11 +303,10 @@ function bigStamp(ctx, x, y, w, h, ok, alpha, rot) {
 // —— 证件 ——
 // 每张证件的可点区（相对证件左上角）
 const FIELDS = {
-  id: { 'id.photo': [5, 21, 60, 72], 'id.name': [68, 22, 102, 34], 'id.no': [68, 58, 102, 24] },
+  id: { 'id.photo': [5, 21, 60, 72], 'id.name': [68, 22, 102, 34] },
   pass: { 'pass.name': [5, 22, 118, 34], 'pass.until': [5, 58, 100, 38], 'pass.seal': [106, 58, 64, 64] },
-  permit: { 'permit.date': [5, 22, 100, 36], 'permit.name': [5, 58, 110, 24] },
 };
-const SIZE = { id: [174, 118], pass: [174, 134], permit: [174, 86] };
+const SIZE = { id: [174, 118], pass: [174, 134] };
 
 function idCard(ctx, x, y, d, f) {
   const [w, h] = SIZE.id;
@@ -271,6 +330,13 @@ function idCard(ctx, x, y, d, f) {
   // 一条小磁条做装饰
   ctx.fillStyle = '#7fa6ad';
   ctx.fillRect(x + 8, y + 96, 54, 4);
+  // 存档手印
+  ctx.fillStyle = '#e4eef0';
+  ctx.fillRect(x + 140, y + 62, 26, 32);
+  fingerprint(ctx, x + 153, y + 78, 13, d.print, 0.55);
+  ctx.strokeStyle = '#7fa6ad';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(x + 140, y + 62, 26, 32);
 }
 
 function passCard(ctx, x, y, d) {
@@ -289,40 +355,6 @@ function passCard(ctx, x, y, d) {
   for (let i = 0; i < 6; i++) ctx.fillRect(x + 9 + i * 16, y + 108, 10, 3);
   text(ctx, '凭此证入内城', x + 9, y + 121, 10, '#8a6a4a');
   seal(ctx, d.seal, x + 138, y + 90, 24, 0.9);
-}
-
-function permitCard(ctx, x, y, d) {
-  const [w, h] = SIZE.permit;
-  block(ctx, x, y, w, h, '#ffd0de', '#e8a8bf', { drop: 4, shadeH: 5 });
-  ctx.fillStyle = '#c94f7c';
-  ctx.fillRect(x, y, w, 18);
-  text(ctx, '当日许可', x + 8, y + 9, 11, C.white, 'left', '900');
-  text(ctx, '仅限当日', x + w - 8, y + 9, 10, '#ffe0ea', 'right', '700');
-  text(ctx, '日期', x + 9, y + 27, 10, '#9a4a6a');
-  text(ctx, fmtDate(d.date), x + 9, y + 44, 20, C.ink, 'left', '900');
-  text(ctx, d.name, x + 9, y + 70, 13, C.ink, 'left', '900');
-  // 条形码
-  ctx.fillStyle = C.ink;
-  const r = rng(d.name.length * 13 + d.date);
-  let bx = x + 112;
-  while (bx < x + w - 8) {
-    const bw = 1 + Math.floor(r() * 3);
-    ctx.fillRect(bx, y + 30, bw, 40);
-    bx += bw + 1 + Math.floor(r() * 2);
-  }
-}
-
-function permitSlot(ctx, x, y) {
-  const [w, h] = SIZE.permit;
-  ctx.save();
-  ctx.strokeStyle = 'rgba(255,208,222,0.45)';
-  ctx.lineWidth = 2;
-  ctx.setLineDash([6, 5]);
-  ctx.strokeRect(x, y, w, h);
-  ctx.setLineDash([]);
-  ctx.restore();
-  text(ctx, '当日许可', x + w / 2, y + h / 2 - 8, 13, 'rgba(255,208,222,0.6)', 'center', '900');
-  text(ctx, '（没有）', x + w / 2, y + h / 2 + 12, 11, 'rgba(255,208,222,0.45)', 'center', '700');
 }
 
 // 钞票（夹在证件里）
@@ -423,4 +455,205 @@ function booth(ctx, bx, by, bw, bh, t, gate) {
   ctx.restore();
 }
 
-module.exports = { C, SEAL_COLORS, text, bigText, block, drawCells, portrait, icon, ICONS, seal, bigStamp, FIELDS, SIZE, idCard, passCard, permitCard, permitSlot, bill, booth };
+// —— 手印：三种纹（seed % 3：螺纹 / 箕纹 / 弓纹），中心位置也随 seed ——
+function fingerprint(ctx, cx, cy, r, seed, alpha, reveal) {
+  const type = seed % 3;
+  const ox = (((seed >> 2) % 5) - 2) * r * 0.08;
+  const oy = (((seed >> 5) % 5) - 2) * r * 0.08;
+  const k = reveal === undefined ? 1 : reveal;
+  ctx.save();
+  ctx.globalAlpha = alpha === undefined ? 1 : alpha;
+  ctx.beginPath();
+  ctx.ellipse(cx, cy, r * 0.78, r, 0, 0, Math.PI * 2);
+  ctx.clip();
+  ctx.strokeStyle = '#2a2030';
+  ctx.lineWidth = Math.max(1.2, r * 0.07);
+  const n = Math.max(1, Math.round(8 * k));
+  for (let i = 1; i <= n; i++) {
+    const rr = i * r * 0.13;
+    ctx.beginPath();
+    if (type === 0) ctx.ellipse(cx + ox, cy + oy, rr * 0.8, rr, 0, 0, Math.PI * 2);
+    else if (type === 1) {
+      ctx.moveTo(cx + ox - rr, cy + r);
+      ctx.lineTo(cx + ox - rr, cy + oy);
+      ctx.arc(cx + ox, cy + oy, rr, Math.PI, 0);
+      ctx.lineTo(cx + ox + rr, cy + r);
+    } else ctx.ellipse(cx + ox, cy + r * 0.9 + oy, r * 1.2, rr * 1.4 + r * 0.1, 0, Math.PI, 0);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+// —— 钱包：钱越多越鼓，露出来的钞票越多 ——
+function wallet(ctx, cx, cy, money, bump) {
+  const fat = Math.max(0, Math.min(1, money / 160));
+  const w = 74 + fat * 10;
+  const h = 34 + fat * 18;
+  const s = 1 + (bump || 0) * 0.18;
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.scale(s, s);
+  const bills = Math.max(0, Math.min(5, Math.floor(money / 30)));
+  for (let i = 0; i < bills; i++) {
+    const bx = -w / 2 + 8 + i * ((w - 30) / Math.max(1, bills));
+    block(ctx, bx, -h / 2 - 9 - (i % 2) * 3, 24, 16, '#8fdc98', '#5aa864', { shadeH: 3, outline: 1 });
+  }
+  block(ctx, -w / 2, -h / 2, w, h, '#8a5a32', '#6a4222', { shadeH: Math.round(h * 0.3), hi: '#a8743e' });
+  ctx.fillStyle = '#5a3a1e';
+  ctx.fillRect(-w / 2, -2, w, 3);
+  block(ctx, w / 2 - 18, -7, 14, 12, '#ffd23f', '#c99a1e', { shadeH: 3, outline: 1 });
+  ctx.restore();
+}
+
+// —— 打印机 ——
+function printer(ctx, x, y, w, t, busy) {
+  block(ctx, x, y, w, 40, '#5a5468', '#423d50', { drop: 4, shadeH: 10, hi: '#76708a' });
+  ctx.fillStyle = C.ink;
+  ctx.fillRect(x + 14, y + 30, w - 28, 6);
+  const on = busy ? Math.floor(t * 10) % 2 === 0 : true;
+  ctx.fillStyle = on ? (busy ? C.green : '#2a6a3a') : '#1a3a22';
+  ctx.fillRect(x + w - 20, y + 9, 7, 7);
+  ctx.fillStyle = '#3a3448';
+  ctx.fillRect(x + 10, y + 9, w - 46, 4);
+}
+
+// —— 一双手（扶着柜台）——
+function hands(ctx, cx, y, skin, shake) {
+  const sx = shake ? Math.round(Math.sin(shake * 60) * 2) : 0;
+  [-1, 1].forEach((sgn) => {
+    const x = cx + sgn * 34 - 9 + (sgn < 0 ? sx : -sx);
+    block(ctx, x, y, 18, 10, skin[0], skin[1], { shadeH: 3, outline: 2 });
+    ctx.fillStyle = skin[1];
+    ctx.fillRect(x + 4, y + 1, 1, 6);
+    ctx.fillRect(x + 9, y + 1, 1, 6);
+    ctx.fillRect(x + 14, y + 1, 1, 6);
+  });
+}
+
+// —— 报纸上的照片（四种灰 + 网点）——
+const NP = { k: '#2b2620', d: '#5a534a', m: '#8f877b', l: '#c9c0b0', p: '#e9e1cf' };
+function paperPic(ctx, x, y, w, h, pic, t, faces) {
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(x, y, w, h);
+  ctx.clip();
+  const night = pic === 'night';
+  ctx.fillStyle = night ? NP.d : NP.l;
+  ctx.fillRect(x, y, w, h);
+  const gy = y + h * 0.72;
+  ctx.fillStyle = night ? NP.k : NP.m;
+  ctx.fillRect(x, gy, w, h);
+  const R = (a, b, c, d, col) => {
+    ctx.fillStyle = col;
+    ctx.fillRect(Math.round(x + a), Math.round(y + b), Math.round(c), Math.round(d));
+  };
+  // 远处的楼
+  for (let i = 0; i < 9; i++) {
+    const bw = 22 + ((i * 37) % 18);
+    const bh = 30 + ((i * 53) % 40);
+    R(i * 38 - 6, gy - y - bh, bw, bh, night ? '#3a342c' : '#a8a092');
+  }
+  const cx = w / 2;
+  if (pic === 'gate' || pic === 'night' || pic === 'arrest') {
+    R(w - 90, gy - y - 70, 16, 70, NP.k);
+    R(w - 50, gy - y - 70, 16, 70, NP.k);
+    R(w - 96, gy - y - 82, 68, 16, NP.d);
+    R(w - 200, gy - y - 22, 120, 8, NP.k);
+    for (let i = 0; i < 6; i++) R(w - 198 + i * 20, gy - y - 20, 10, 4, NP.p);
+    if (night) {
+      ctx.fillStyle = NP.p;
+      ctx.beginPath();
+      ctx.arc(x + 40, y + 26, 12, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    if (pic === 'arrest') {
+      for (let i = 0; i < 3; i++) {
+        R(30 + i * 34, gy - y - 28 - (i === 1 ? 26 : 0), 32, 26, NP.d);
+        R(32 + i * 34, gy - y - 26 - (i === 1 ? 26 : 0), 28, 3, NP.m);
+      }
+    }
+  } else if (pic === 'hospital') {
+    R(cx - 70, gy - y - 90, 140, 90, NP.p);
+    R(cx - 70, gy - y - 90, 140, 8, NP.d);
+    R(cx - 8, gy - y - 78, 16, 40, NP.k);
+    R(cx - 20, gy - y - 66, 40, 16, NP.k);
+    for (let i = 0; i < 4; i++) R(cx - 60 + i * 34, gy - y - 30, 18, 14, NP.m);
+  } else if (pic === 'market') {
+    for (let i = 0; i < 3; i++) {
+      const sx = 20 + i * (w - 40) / 3;
+      for (let j = 0; j < 5; j++) R(sx + j * 16, gy - y - 54, 16, 12, j % 2 ? NP.p : NP.d);
+      R(sx + 4, gy - y - 42, 4, 42, NP.k);
+      R(sx + 70, gy - y - 42, 4, 42, NP.k);
+      R(sx, gy - y - 18, 80, 10, NP.m);
+    }
+  } else if (pic === 'inspector') {
+    ctx.fillStyle = NP.d;
+    ctx.beginPath();
+    for (let i = 0; i < 10; i++) {
+      const a = -Math.PI / 2 + (i * Math.PI) / 5;
+      const rr = i % 2 ? 18 : 40;
+      ctx.lineTo(x + w - 60 + Math.cos(a) * rr, y + h * 0.42 + Math.sin(a) * rr);
+    }
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = NP.p;
+    ctx.beginPath();
+    ctx.arc(x + w - 60, y + h * 0.42, 12, 0, Math.PI * 2);
+    ctx.fill();
+  } else if (pic === 'medicine') {
+    for (let j = 0; j < 3; j++) {
+      R(16, 18 + j * 34, w - 32, 4, NP.k);
+      for (let i = 0; i < 10; i++) {
+        const bh = 14 + ((i * 7 + j * 3) % 10);
+        R(24 + i * ((w - 48) / 10), 18 + j * 34 - bh, 14, bh, (i + j) % 3 ? NP.d : NP.p);
+      }
+    }
+  } else if (pic === 'oldhouse') {
+    R(cx - 80, gy - y - 70, 120, 70, NP.d);
+    ctx.fillStyle = NP.k;
+    ctx.beginPath();
+    ctx.moveTo(x + cx - 92, y + gy - y - 70);
+    ctx.lineTo(x + cx - 20, y + gy - y - 104);
+    ctx.lineTo(x + cx + 52, y + gy - y - 70);
+    ctx.fill();
+    for (let i = 0; i < 3; i++) R(cx - 68 + i * 36, gy - y - 54, 18, 20, NP.l);
+    R(w - 70, 10, 6, gy - y - 10, NP.k);
+    R(w - 150, 10, 86, 6, NP.k);
+    R(w - 148, 16, 2, 30, NP.k);
+  } else if (pic === 'school') {
+    R(cx - 90, gy - y - 76, 180, 76, NP.p);
+    R(cx - 90, gy - y - 76, 180, 8, NP.d);
+    ctx.fillStyle = NP.k;
+    ctx.beginPath();
+    ctx.arc(x + cx, y + gy - y - 50, 12, 0, Math.PI * 2);
+    ctx.fill();
+    R(cx - 1, gy - y - 112, 2, 36, NP.k);
+    R(cx + 1, gy - y - 112, 22, 12, NP.d);
+    for (let i = 0; i < 6; i++) R(cx - 80 + i * 28, gy - y - 28, 14, 12, NP.m);
+  } else if (pic === 'couple') {
+    for (let i = 0; i < 3; i++) {
+      ctx.fillStyle = NP.d;
+      ctx.beginPath();
+      ctx.arc(x + 30 + i * (w - 60) / 2, y + gy - y - 40, 22, 0, Math.PI * 2);
+      ctx.fill();
+      R(28 + i * (w - 60) / 2, gy - y - 20, 4, 20, NP.k);
+    }
+  }
+  // 照片里的人
+  const ppl = (faces || []).filter(Boolean);
+  ppl.forEach((f, i) => {
+    const cell = Math.max(2, Math.min(4, Math.floor((h - 14) / 22)));
+    const pw = face.W * cell;
+    const px = ppl.length === 1 ? (pic === 'night' || pic === 'gate' ? 36 : cx - pw / 2 - (pic === 'inspector' ? 40 : 0)) : cx - pw - 4 + i * (pw + 8);
+    portrait(ctx, f, Math.round(x + px), Math.round(y + h - face.H * cell), cell, { tone: 'grey', mood: pic === 'night' ? 'sad' : null });
+  });
+  // 网点
+  ctx.fillStyle = 'rgba(43,38,32,0.16)';
+  for (let yy = 0; yy < h; yy += 4) for (let xx = (yy / 4) % 2 ? 2 : 0; xx < w; xx += 4) ctx.fillRect(x + xx, y + yy, 1, 1);
+  ctx.restore();
+  ctx.strokeStyle = NP.k;
+  ctx.lineWidth = 2;
+  ctx.strokeRect(x, y, w, h);
+}
+
+module.exports = { C, SEAL_COLORS, NP, text, bigText, block, drawCells, portrait, icon, ICONS, seal, bigStamp, FIELDS, SIZE, idCard, passCard, bill, booth, fingerprint, wallet, printer, hands, paperPic, toneColor };

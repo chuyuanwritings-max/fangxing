@@ -62,6 +62,8 @@ function mutate(f, mode, r) {
     g.hair = differentFrom(r, HAIR_STYLES, f.hair);
     g.shape = differentFrom(r, 3, f.shape);
     g.skin = differentFrom(r, SKIN.length, f.skin);
+  } else if (mode === 'glasses') {
+    g.glasses = !f.glasses;
   } else if (mode === 'hair') {
     g.hair = differentFrom(r, HAIR_STYLES, f.hair);
     if (g.hair === 4 || f.hair === 4) g.hairC = f.hairC; // 寸头本来就看不太出颜色
@@ -82,10 +84,10 @@ function mutate(f, mode, r) {
 }
 
 const cache = {};
-// o: { blink, talk }
+// o: { blink, talk, look: -1 / 1 眼珠往左 / 右, mood: 'sad' 低头苦脸 / 'grin' 咧嘴 / 'shock' 张嘴 }
 function grid(f, o) {
   o = o || {};
-  const key = KEYS.concat(['cloth', 'collar']).map((k) => +f[k]).join(',') + (o.blink ? 'b' : '') + (o.talk ? 't' : '');
+  const key = KEYS.concat(['cloth', 'collar']).map((k) => +f[k]).join(',') + (o.blink ? 'b' : '') + (o.talk ? 't' : '') + (o.look || '') + (o.mood || '');
   if (cache[key]) return cache[key];
   const c = new Array(W * H).fill(null);
   const set = (x, y, col) => {
@@ -187,6 +189,11 @@ function grid(f, o) {
   if (o.blink) {
     rect(6, 9, 2, 1, skS);
     rect(10, 9, 2, 1, skS);
+  } else if (o.look) {
+    // 眼神躲：两只眼都看向一边（眼白 + 眼珠）
+    const lk = o.look < 0 ? 0 : 1;
+    set(6, 9, WHITE); set(7, 9, WHITE); set(10, 9, WHITE); set(11, 9, WHITE);
+    set(6 + lk, 9, EYE); set(10 + lk, 9, EYE);
   } else if (f.eyes === 0) {
     set(6, 9, EYE); set(11, 9, EYE);
   } else if (f.eyes === 1) {
@@ -215,7 +222,15 @@ function grid(f, o) {
   if (f.mouth === 0) rect(8, 13, 2, 1, MOUTH);
   else if (f.mouth === 1) rect(7, 13, 4, 1, MOUTH);
   else { set(7, 12, MOUTH); rect(8, 13, 2, 1, MOUTH); set(10, 12, MOUTH); }
-  if (o.talk) { rect(8, 13, 2, 1, EYE); rect(8, 14, 2, 1, MOUTH); }
+  if (o.mood === 'sad') {
+    rect(7, 13, 4, 1, sk); set(7, 14, MOUTH); rect(8, 13, 2, 1, MOUTH); set(10, 14, MOUTH);
+    set(5, 7, sk); set(12, 7, sk); set(6, 6, hcS); set(11, 6, hcS);
+  } else if (o.mood === 'grin') {
+    rect(6, 12, 6, 2, sk); set(6, 12, MOUTH); rect(7, 13, 4, 1, MOUTH); set(11, 12, MOUTH); rect(8, 13, 2, 1, WHITE);
+  } else if (o.mood === 'shock') {
+    rect(7, 12, 4, 3, sk); rect(8, 12, 2, 3, EYE); set(8, 12, MOUTH); set(9, 14, MOUTH);
+  }
+  if (o.talk && !o.mood) { rect(8, 13, 2, 1, EYE); rect(8, 14, 2, 1, MOUTH); }
   if (f.mole) set(12, 12, '#5a3020');
 
   // 发型
